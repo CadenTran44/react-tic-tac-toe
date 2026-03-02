@@ -47,3 +47,5 @@ export default function Board() {
     </>
   );
 }
+
+// installed dev tools
