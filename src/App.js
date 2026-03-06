@@ -59,11 +59,18 @@ export default function Game() {
   const currentSquares = history[currentMove];
 
   function handlePlay(nextSquares) {
-    const nextHistory = [...history.slice(0, currentMove + 1), nextSquares];
+    let nextHistory = [...history.slice(0, currentMove + 1), nextSquares];
+    if (!calculateWinner(nextSquares) && nextSquares.some(s => s === null)) {
+      const oMove = findBestMove(nextSquares);
+      if (oMove !== -1) {
+        const afterO = nextSquares.slice();
+        afterO[oMove] = 'O';
+        nextHistory = [...nextHistory, afterO];
+      }
+    }
     setHistory(nextHistory);
     setCurrentMove(nextHistory.length - 1);
   }
-
   function jumpTo(nextMove) {
     setCurrentMove(nextMove);
   }
@@ -92,6 +99,28 @@ export default function Game() {
       </div>
     </div>
   );
+}
+
+function findBestMove(squares) {
+  // checks if O can win in the next move
+  for (let i = 0; i < 9; i++) {
+    if (!squares[i]) {
+      const trial = squares.slice();
+      trial[i] = 'O';
+      if (calculateWinner(trial) === 'O') return i;
+    }
+  }
+  // blocks X from winning
+  for (let i = 0; i < 9; i++) {
+    if (!squares[i]) {
+      const trial = squares.slice();
+      trial[i] = 'X';
+      if (calculateWinner(trial) === 'X') return i;
+    }
+  }
+  // prefers center, then corners, then edges
+  const moveOrder = [4, 0, 2, 6, 8, 1, 3, 5, 7];
+  return moveOrder.find(i => !squares[i]) ?? -1;
 }
 
 function calculateWinner(squares) {
