@@ -1,5 +1,4 @@
 import { useState } from 'react';
-
 function Square({ value, onSquareClick }) {
   return (
     <button className="square" onClick={onSquareClick}>
@@ -7,7 +6,6 @@ function Square({ value, onSquareClick }) {
     </button>
   );
 }
-
 function Board({ xIsNext, squares, onPlay }) {
   function handleClick(i) {
     if (calculateWinner(squares) || squares[i]) {
@@ -21,7 +19,6 @@ function Board({ xIsNext, squares, onPlay }) {
     }
     onPlay(nextSquares);
   }
-
   const winner = calculateWinner(squares);
   let status;
   if (winner) {
@@ -29,7 +26,6 @@ function Board({ xIsNext, squares, onPlay }) {
   } else {
     status = 'Next player: ' + (xIsNext ? 'X' : 'O');
   }
-
   return (
     <>
       <div className="status">{status}</div>
@@ -51,23 +47,33 @@ function Board({ xIsNext, squares, onPlay }) {
     </>
   );
 }
-
 export default function Game() {
   const [history, setHistory] = useState([Array(9).fill(null)]);
   const [currentMove, setCurrentMove] = useState(0);
+  const [humanPlayer, setHumanPlayer] = useState('X');
   const xIsNext = currentMove % 2 === 0;
   const currentSquares = history[currentMove];
-
+  const currentPlayer = xIsNext ? 'X' : 'O';
   function handlePlay(nextSquares) {
     const nextHistory = [...history.slice(0, currentMove + 1), nextSquares];
     setHistory(nextHistory);
     setCurrentMove(nextHistory.length - 1);
   }
-
+  function handleSwitch() {
+    if (calculateWinner(currentSquares) || !currentSquares.some(s => s === null)) return;
+    const i = findBestMove(currentSquares, currentPlayer);
+    if (i === -1) return;
+    const nextSquares = currentSquares.slice();
+    nextSquares[i] = currentPlayer;
+    const nextHistory = [...history.slice(0, currentMove + 1), nextSquares];
+    setHistory(nextHistory);
+    setCurrentMove(nextHistory.length - 1);
+    setHumanPlayer(currentPlayer === 'X' ? 'O' : 'X');
+  }
   function jumpTo(nextMove) {
     setCurrentMove(nextMove);
   }
-
+  const gameOver = !!calculateWinner(currentSquares) || !currentSquares.some(s => s === null);
   const moves = history.map((squares, move) => {
     let description;
     if (move > 0) {
@@ -81,11 +87,15 @@ export default function Game() {
       </li>
     );
   });
-
   return (
     <div className="game">
       <div className="game-board">
         <Board xIsNext={xIsNext} squares={currentSquares} onPlay={handlePlay} />
+        {!gameOver && (
+          <button onClick={handleSwitch}>
+            Switch to Player {humanPlayer === 'X' ? 'O' : 'X'}
+          </button>
+        )}
       </div>
       <div className="game-info">
         <ol>{moves}</ol>
@@ -93,7 +103,49 @@ export default function Game() {
     </div>
   );
 }
+function minimax(board, depth, isMaximizing) {
+  // checks terminal conditions
+  const winner = calculateWinner(board);
+  if (winner === 'X') return 10 - depth;
+  if (winner === 'O') return depth - 10;
+  if (board.every(s => s !== null)) return 0;
 
+  let bestScore = isMaximizing ? -Infinity : Infinity;
+
+  // loops through all cells
+  for (let i = 0; i < 9; i++) {
+    if (board[i] === null) {
+      board[i] = isMaximizing ? 'X' : 'O';
+      const score = minimax(board, depth + 1, !isMaximizing);
+      // updates bestScore
+      bestScore = isMaximizing
+        ? Math.max(bestScore, score)
+        : Math.min(bestScore, score);
+      // undo the move
+      board[i] = null;
+    }
+  }
+
+  return bestScore;
+}
+function findBestMove(squares, player) {
+  const isMaximizing = player === 'X';
+  let bestScore = isMaximizing ? -Infinity : Infinity;
+  let bestIndex = -1;
+  const board = squares.slice();
+  for (let i = 0; i < 9; i++) {
+    if (board[i] === null) {
+      board[i] = player;
+      const score = minimax(board, 0, !isMaximizing);
+      board[i] = null;
+      if (isMaximizing ? score > bestScore : score < bestScore) {
+        bestScore = score;
+        bestIndex = i;
+      }
+    }
+  }
+  return bestIndex;
+}
 function calculateWinner(squares) {
   const lines = [
     [0, 1, 2],
@@ -113,5 +165,4 @@ function calculateWinner(squares) {
   }
   return null;
 }
-
 // comment 1(task 3): installed dev tools
